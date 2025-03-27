@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reproductor Musical con QR</title>
+    <title>Reproductor de Música con QR</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -23,75 +23,72 @@
             display: block;
         }
         #nuevoEscan {
-            display: none; /* Oculto inicialmente */
+            display: none;
         }
     </style>
 </head>
 <body>
-    <h1>Reproductor Musical con QR</h1>
+    <h1>Reproductor de Música con QR</h1>
     <audio id="miReproductor" controls></audio>
     <br>
     <video id="video" width="300" height="200" style="border: 1px solid #ccc;"></video>
     <br>
     <button id="iniciarCamara">Iniciar Cámara</button>
-    <button id="nuevoEscan">Escanear Nuevo Código</button>
+    <button id="nuevoEscan">Escanear Nuevo QR</button>
     <button id="cambiarCamara">Cambiar Cámara</button>
 
     <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.min.js"></script>
     <script>
-        const reproductor = document.getElementById('miReproductor');
-        const video = document.getElementById('video');
-        const iniciarCamara = document.getElementById('iniciarCamara');
-        const nuevoEscan = document.getElementById('nuevoEscan');
-        const cambiarCamara = document.getElementById('cambiarCamara');
+        const reproductor = document.getElementById("miReproductor");
+        const video = document.getElementById("video");
+        const iniciarCamara = document.getElementById("iniciarCamara");
+        const nuevoEscan = document.getElementById("nuevoEscan");
+        const cambiarCamara = document.getElementById("cambiarCamara");
 
         let stream = null;
         let usandoCamaraTrasera = true;
-        let escaneoActivo = false;
 
-        // Iniciar cámara
-        iniciarCamara.addEventListener('click', iniciarCamaraQR);
+        iniciarCamara.addEventListener("click", iniciarCamaraQR);
+        nuevoEscan.addEventListener("click", reiniciarEscan);
+        cambiarCamara.addEventListener("click", cambiarCamaraFn);
 
-        // Botón para nuevo escaneo
-        nuevoEscan.addEventListener('click', () => {
+        function iniciarCamaraQR() {
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: usandoCamaraTrasera ? "environment" : "user",
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            }).then(function(s) {
+                stream = s;
+                video.srcObject = stream;
+                video.play();
+                iniciarCamara.style.display = "none";
+                nuevoEscan.style.display = "none";
+                cambiarCamara.style.display = "inline-block";
+                escanearQR();
+            }).catch(function(error) {
+                alert("Error al acceder a la cámara: " + error.message);
+            });
+        }
+
+        function reiniciarEscan() {
             detenerCamara();
             iniciarCamaraQR();
-            nuevoEscan.style.display = 'none';
-        });
+        }
 
-        // Cambiar entre cámara trasera/delantera
-        cambiarCamara.addEventListener('click', () => {
+        function cambiarCamaraFn() {
             usandoCamaraTrasera = !usandoCamaraTrasera;
             detenerCamara();
             iniciarCamaraQR();
-        });
-
-        async function iniciarCamaraQR() {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: usandoCamaraTrasera ? "environment" : "user",
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    }
-                });
-                video.srcObject = stream;
-                video.play();
-                iniciarCamara.style.display = 'none';
-                cambiarCamara.style.display = 'inline-block';
-                escanearQR();
-            } catch (error) {
-                alert("Error al acceder a la cámara: " + error.message);
-            }
         }
 
         function escanearQR() {
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            escaneoActivo = true;
+            const canvas = document.createElement("canvas");
+            const context = canvas.getContext("2d");
 
             function tick() {
-                if (video.readyState === video.HAVE_ENOUGH_DATA && escaneoActivo) {
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
                     context.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -102,12 +99,10 @@
                         reproductor.src = qrCode.data;
                         reproductor.play();
                         detenerCamara();
-                        nuevoEscan.style.display = 'inline-block';
-                        escaneoActivo = false;
+                        nuevoEscan.style.display = "inline-block";
+                    } else {
+                        requestAnimationFrame(tick);
                     }
-                }
-                if (escaneoActivo) {
-                    requestAnimationFrame(tick);
                 }
             }
             tick();
@@ -115,7 +110,9 @@
 
         function detenerCamara() {
             if (stream) {
-                stream.getTracks().forEach(track => track.stop());
+                stream.getTracks().forEach(function(track) {
+                    track.stop();
+                });
                 video.srcObject = null;
             }
         }
